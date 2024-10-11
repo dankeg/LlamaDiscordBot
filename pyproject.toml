@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "discord-ollama-bot"
+version = "0.1.0"
+description = "A Discord bot that integrates with Ollama LLM"
+authors = ["Ganesh Danke <danke.g@northeastern.edu>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+discord = "^2.3.2"
+ollama = "^0.3.3"
+
+[tool.poetry.dev-dependencies]
+black = "^23.9.1"
+ruff = "^0.0.291"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 88
+target-version = ["py38"]
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "W", "C90"]
+ignore = ["E501"]  # Ignore line length errors (if desired)

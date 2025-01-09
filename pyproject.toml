@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "discord-ollama-bot"
+name = "LlamaAI"
 version = "0.1.0"
 description = "A Discord bot that integrates with Ollama LLM"
 authors = ["Ganesh Danke <danke.g@northeastern.edu>"]

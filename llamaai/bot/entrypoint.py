@@ -1,6 +1,33 @@
 import discord
+from discord.ext import tasks
 import json
-from pytorchimp import query_model
+import redis
+import time
+
+redis_cli = redis.Redis(host="redis", port=6379, charset="utf-8", decode_responses=True)
+
+# Set your key
+redis_cli.set("my-first-key", "code-always")
+
+# Get the value of inserted key
+print(redis_cli.get("my-first-key"))
+
+
+def push_query(*values):
+    redis_cli.rpush("QUERY", *values)
+
+
+def pull_response(count=10):
+    contents = []
+    for _ in range(count):
+        msg = redis_cli.rpop("RESPONSE")
+        if msg is None:
+            time.sleep(0.1)
+            continue
+        else:
+            contents.append(msg)
+    return contents
+
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -11,6 +38,7 @@ DISCORD_TOKEN = token_file.read()
 
 opted_in_users = set()
 
+
 def load_opted_in_users():
     global opted_in_users
     try:
@@ -19,15 +47,18 @@ def load_opted_in_users():
     except FileNotFoundError:
         opted_in_users = set()
 
+
 def save_opted_in_users():
     with open("opted_in_users.txt", "w") as f:
         for user_id in opted_in_users:
             f.write(f"{user_id}\n")
 
+
 async def send_long_message(channel, message, chunk_size=1900):
     for i in range(0, len(message), chunk_size):
         chunk = message[i : i + chunk_size]
         await channel.send(chunk)
+
 
 def read_conversation_history(user_id):
     file_path = f"{user_id}_conversation.json"
@@ -38,16 +69,50 @@ def read_conversation_history(user_id):
         conversation_history = []
     return conversation_history
 
+
 def write_conversation_history(user_id, conversation_history):
     file_path = f"{user_id}_conversation.json"
     with open(file_path, "w") as file:
         json.dump(conversation_history, file)
+
 
 @client.event
 async def on_ready():
     print(f"Logged in as {client.user}")
     load_opted_in_users()
     print(f"Loaded opted-in users: {opted_in_users}")
+    my_updater.start()
+
+
+@tasks.loop(seconds=5)  # Run this task every 5 minutes
+async def my_updater():
+    responses = pull_response()
+    for response in responses:
+        model_response = json.loads(response)
+        message = model_response["message"]
+        message_id = model_response["message_id"]
+        channel_id = model_response["channel_id"]
+
+        final_response = message.strip()
+        if "Assistant:" in final_response:
+            parts = final_response.rsplit("Assistant:", 1)
+            final_response = parts[-1].strip()
+
+        # if final_response.lower() not in ["skip", ""]:
+        #     # Update conversation and send only the final text to Discord
+        #     conversation_history.append({"role": "assistant", "content": final_response})
+        #     await send_long_message(message.channel, final_response)
+        #     write_conversation_history(user_id, conversation_history)
+        # else:
+        #     print("Assistant chose to skip the response.")
+
+        channel = client.get_channel(channel_id)
+
+        fetched_msg = await channel.fetch_message(message_id)
+        print(f"Fetched message with ID: {fetched_msg.id}")
+
+        await fetched_msg.edit(content=final_response)
+
 
 @client.event
 async def on_message(message):
@@ -57,13 +122,29 @@ async def on_message(message):
     if message.content.lower() == "!optin":
         opted_in_users.add(str(message.author.id))
         save_opted_in_users()
-        await message.channel.send("You have opted in. The bot will now process all of your messages.")
+        await message.channel.send(
+            "You have opted in. The bot will now process all of your messages."
+        )
         return
 
     if message.content.lower() == "!optout":
         opted_in_users.discard(str(message.author.id))
         save_opted_in_users()
-        await message.channel.send("You have opted out. The bot will no longer process your messages.")
+        await message.channel.send(
+            "You have opted out. The bot will no longer process your messages."
+        )
+        return
+
+    if message.content.lower() == "!help":
+        opted_in_users.discard(str(message.author.id))
+        save_opted_in_users()
+        await message.channel.send(
+            "You are Llama, a helpful assistant. You must not fabricate user messages.\n"
+            "Only respond from the 'assistant' perspective. Always be respectful and helpful.\n"
+            "When you respond, do not include additional user lines or rewrite what the user said.\n"
+            "Provide your best answer succinctly.\n"
+            "If a message refers to someone other than Llama, respond with 'skip'"
+        )
         return
 
     if str(message.author.id) not in opted_in_users:
@@ -98,28 +179,23 @@ async def on_message(message):
         # Let the model know we want the next assistant message
         full_prompt += "Assistant:"
 
+        # Whenever a user sends any message, the bot will reply.
+        sent_msg = await message.channel.send("Processing response!")
+
+        # Capture and print the ID of the sent message
+        msg_id = sent_msg.id
+        print(f"Sent message ID: {msg_id}")
+
         # Send the prompt to the model
-        raw_response = query_model(full_prompt)
-        print(f"Raw LLM response: {raw_response}")
+        push_query(
+            json.dumps(
+                {
+                    "message": full_prompt,
+                    "message_id": msg_id,
+                    "channel_id": message.channel.id,
+                }
+            )
+        )
 
-        # ---------------------------------------------------
-        # EXTRACT ONLY THE FINAL ASSISTANT TEXT
-        # ---------------------------------------------------
-        # Some models will return the entire conversation, or repeated "Assistant:" lines.
-        # We'll isolate everything AFTER the last "Assistant:".
-        final_response = raw_response.strip()
-        if "Assistant:" in final_response:
-            parts = final_response.rsplit("Assistant:", 1)
-            final_response = parts[-1].strip()
-
-        print(f"Final extracted response: {final_response}")
-
-        if final_response.lower() not in ["skip", ""]:
-            # Update conversation and send only the final text to Discord
-            conversation_history.append({"role": "assistant", "content": final_response})
-            await send_long_message(message.channel, final_response)
-            write_conversation_history(user_id, conversation_history)
-        else:
-            print("Assistant chose to skip the response.")
 
 client.run(DISCORD_TOKEN)

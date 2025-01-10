@@ -1,0 +1,41 @@
+version: '0.0.1'
+
+services:
+
+  bot-entrypoint:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: prod
+    privileged: true
+    command: python3 -u llamaai/bot/entrypoint.py
+    volumes:
+      - .:/opt/pipeline
+    networks:
+      - my_network  # attach to the same network
+
+  redis:
+    image: redis:6.2
+    container_name: redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    networks:
+      - my_network  # attach to the same network
+
+  runner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: prod
+    scale: 3
+    privileged: true
+    command: python3 -u llamaai/model/runner.py
+    volumes:
+      - .:/opt/pipeline
+    networks:
+      - my_network  # attach to the same network
+
+networks:
+  my_network:
+    driver: bridge

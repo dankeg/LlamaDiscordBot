@@ -8,7 +8,9 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.8"
 discord = "^2.3.2"
-ollama = "^0.3.3"
+torch = "^2.5.0"
+transformers = "^4.47.1"
+redis = "^5.2.1"
 
 [tool.poetry.dev-dependencies]
 black = "^23.9.1"

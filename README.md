@@ -2,6 +2,8 @@
 
 As the name suggests, this discord bot allows you to use Ollama in your discord server. To prevent spam and unwanted messages, it allows individual users to opt in and out. It also stores conversation history and context per user, so that different conversations cannot interfere with one another. More advanced features, such as specifying the specific LLM, multi-user conversations, deleting conversation history, and more are in progress!
 
+[Invite the bot](https://discord.com/oauth2/authorize?client_id=1292327901139828857&permissions=309237722112&integration_type=0&scope=bot)
+
 ## How to Setup the Bot
 1. Install Ollama
 2. Clone the repo, and perform `poetry install` in the root of the repo

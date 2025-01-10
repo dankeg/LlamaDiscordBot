@@ -83,6 +83,10 @@ async def on_ready():
     print(f"Loaded opted-in users: {opted_in_users}")
     my_updater.start()
 
+    await client.change_presence(
+        activity=discord.Game(name="Use !help for info!")
+    )
+
 
 @tasks.loop(seconds=5)  # Run this task every 5 minutes
 async def my_updater():
@@ -139,11 +143,9 @@ async def on_message(message):
         opted_in_users.discard(str(message.author.id))
         save_opted_in_users()
         await message.channel.send(
-            "You are Llama, a helpful assistant. You must not fabricate user messages.\n"
-            "Only respond from the 'assistant' perspective. Always be respectful and helpful.\n"
-            "When you respond, do not include additional user lines or rewrite what the user said.\n"
-            "Provide your best answer succinctly.\n"
-            "If a message refers to someone other than Llama, respond with 'skip'"
+            "!optin: Allow the bot to respond to your messages.\n"
+            "!optout: Make the bot ignore your messages. Active by default.\n"
+            "!help: Show this help dialogue.\n"
         )
         return
 

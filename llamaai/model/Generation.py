@@ -1,17 +1,14 @@
 import torch
 import time
-import redis
-import json
 from huggingface_hub import login
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
 
 class LlamaModel:
-    # Class-level (shared) attributes
     device = None
     tokenizer1 = None
     model1 = None
-    model1_checkpoint = "meta-llama/Llama-3.2-1B-Instruct"
+    model1_checkpoint = "meta-llama/Llama-3.2-3B-Instruct"
     is_initialized = False
 
     @classmethod
@@ -68,9 +65,16 @@ class LlamaModel:
 
     @classmethod
     def query_model(cls, input_prompt: str) -> str:
-        """
-        Query the initialized model with a given prompt.
-        Returns the model's response as a string.
+        """Query the initialized model with a given prompt. Returns the model's response as a string.
+
+        Args:
+            input_prompt (str): Prompt to query model with
+
+        Raises:
+            ValueError: Model weights have yet to be initialized and loaded
+
+        Returns:
+            str: Generated model response
         """
 
         if not cls.is_initialized:
@@ -91,7 +95,7 @@ class LlamaModel:
             inputs1.input_ids,
             attention_mask=inputs1.attention_mask,
             max_length=1000,
-            temperature=0.05,  # Lower temperature for less "creative" output
+            temperature=0.05,  # Lower temperature for less "improper" output
             top_p=0.95,
             do_sample=True,
             num_beams=1,

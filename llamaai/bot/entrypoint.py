@@ -81,26 +81,29 @@ async def on_ready():
     print(f"Logged in as {client.user}")
     load_opted_in_users()
     print(f"Loaded opted-in users: {opted_in_users}")
-    my_updater.start()
+    updater.start()
 
-    await client.change_presence(
-        activity=discord.Game(name="Use !help for info!")
-    )
+    await client.change_presence(activity=discord.Game(name="Use !help for info!"))
 
 
-@tasks.loop(seconds=5)  # Run this task every 5 minutes
-async def my_updater():
+@tasks.loop(seconds=5)  # Run this task every 5 seconds
+async def updater():
     responses = pull_response()
     for response in responses:
         model_response = json.loads(response)
         message = model_response["message"]
         message_id = model_response["message_id"]
         channel_id = model_response["channel_id"]
+        user_id = model_response["user_id"]
 
         final_response = message.strip()
         if "Assistant:" in final_response:
             parts = final_response.rsplit("Assistant:", 1)
             final_response = parts[-1].strip()
+
+        conversation_history = read_conversation_history(user_id)
+        conversation_history.append({"role": "assistant", "content": final_response})
+        write_conversation_history(user_id, conversation_history)
 
         # if final_response.lower() not in ["skip", ""]:
         #     # Update conversation and send only the final text to Discord
@@ -163,13 +166,15 @@ async def on_message(message):
         conversation_history = conversation_history[-20:]
 
         # Build prompt
-        system_prompt = (
-            "You are Llama, a helpful assistant. You must not fabricate user messages.\n"
-            "Only respond from the 'assistant' perspective. Always be respectful and helpful.\n"
-            "When you respond, do not include additional user lines or rewrite what the user said.\n"
-            "Provide your best answer succinctly.\n"
-            "If a message refers to someone other than Llama, respond with 'skip'"
-        )
+        system_prompt = """
+        You are Llama, a helpful assistant. You will receive snippets of dialogue labeled "User:" and "Assistant:". 
+        Your task is to produce exactly one new "Assistant" response. Follow these rules:
+
+        1. Do not fabricate or alter any user messages.
+        2. Respond only as “Assistant,” using your own words (do not quote or restate user messages).
+        3. Be respectful and helpful, providing a succinct answer.
+        4. If the user refers to someone other than Llama, respond with "skip."
+        """
 
         full_prompt = "System:\n" + system_prompt + "\n\nConversation:\n"
         for msg_dict in conversation_history:
@@ -195,6 +200,7 @@ async def on_message(message):
                     "message": full_prompt,
                     "message_id": msg_id,
                     "channel_id": message.channel.id,
+                    "user_id": user_id,
                 }
             )
         )

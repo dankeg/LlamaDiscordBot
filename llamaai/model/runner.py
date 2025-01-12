@@ -1,5 +1,3 @@
-from transformers import AutoTokenizer, AutoModelForCausalLM
-from huggingface_hub import login
 
 from llamaai.model.Generation import LlamaModel
 from llamaai.model.RedisQueries import handle_queries

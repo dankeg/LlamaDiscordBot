@@ -28,7 +28,7 @@ services:
       context: .
       dockerfile: Dockerfile
       target: prod
-    scale: 3
+    scale: 1
     privileged: true
     command: python3 -u llamaai/model/runner.py
     volumes:

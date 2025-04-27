@@ -1,4 +1,3 @@
-
 from llamaai.model.Generation import LlamaModel
 from llamaai.model.RedisQueries import handle_queries
 

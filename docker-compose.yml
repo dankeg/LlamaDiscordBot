@@ -13,6 +13,8 @@ services:
       - .:/opt/pipeline
     networks:
       - my_network  # attach to the same network
+    env_file:
+      - .env
 
   redis:
     image: redis:6.2
@@ -35,6 +37,8 @@ services:
       - .:/opt/pipeline
     networks:
       - my_network  # attach to the same network
+    env_file:
+      - .env
 
 networks:
   my_network:

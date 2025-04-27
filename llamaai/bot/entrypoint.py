@@ -3,6 +3,7 @@ from discord.ext import tasks
 import json
 import redis
 import time
+import os
 
 redis_cli = redis.Redis(host="redis", port=6379, charset="utf-8", decode_responses=True)
 
@@ -33,9 +34,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 client = discord.Client(intents=intents)
 
-token_file = open("license.txt", "r")
-DISCORD_TOKEN = token_file.read()
-
+DISCORD_TOKEN = os.getenv("DISCORD")
 opted_in_users = set()
 
 

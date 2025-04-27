@@ -2,6 +2,7 @@ import torch
 import time
 from huggingface_hub import login
 from transformers import AutoTokenizer, AutoModelForCausalLM
+import os
 
 
 class LlamaModel:
@@ -39,9 +40,7 @@ class LlamaModel:
         print(f"We have {torch.get_num_threads()} threads now available!")
 
         # Login to Hugging Face Hub
-        with open(token_file_path, "r") as f:
-            access_token = f.read().strip()
-        login(access_token)
+        login(os.getenv("HUGGING_FACE"))
 
         # Load the tokenizer
         cls.tokenizer1 = AutoTokenizer.from_pretrained(cls.model1_checkpoint)
@@ -84,7 +83,6 @@ class LlamaModel:
 
         start_time = time.time()
 
-        # Tokenize input and move tensors to the correct device
         inputs1 = cls.tokenizer1(input_prompt, return_tensors="pt", truncation=True).to(
             cls.device
         )
@@ -95,7 +93,7 @@ class LlamaModel:
             inputs1.input_ids,
             attention_mask=inputs1.attention_mask,
             max_length=1000,
-            temperature=0.05,  # Lower temperature for less "improper" output
+            temperature=0.05,
             top_p=0.95,
             do_sample=True,
             num_beams=1,
